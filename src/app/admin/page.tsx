@@ -4,6 +4,7 @@ import { requireSuperAdmin } from '@/lib/admin';
 import { setAccountStatus } from '@/app/admin/actions';
 import { fmtD } from '@/lib/path';
 import Flash from '@/components/Flash';
+import { label } from '@/lib/accountType';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,7 +48,7 @@ export default async function Accounts({ searchParams }: { searchParams: Promise
           <thead><tr><th>Account</th><th>Owner</th><th>Status</th><th>AI key</th><th>WhatsApp</th><th>Meta secret</th><th>Razorpay</th><th>IG/FB</th><th>Created</th><th></th></tr></thead>
           <tbody>{shown.map((r) => (
             <tr key={r.id}>
-              <td><Link href={`/admin/accounts/${r.id}`}><b>{r.name}</b></Link><div className="muted" style={{ fontSize: 11.5 }}><span className={'pill ' + (r.account_type === 'agency' ? 'warn' : '')}>{r.account_type === 'agency' ? 'Agency' : 'Business owner'}</span> {[r.category, r.city].filter(Boolean).join(' · ') || (r.onboarded ? '' : 'Onboarding not finished')}</div></td>
+              <td><Link href={`/admin/accounts/${r.id}`}><b>{r.name}</b></Link><div className="muted" style={{ fontSize: 11.5 }}><span className={'pill ' + (r.account_type === 'agency' ? 'warn' : r.account_type === 'creator' ? 'good' : '')}>{label(r.account_type)}</span> {[r.category, r.city].filter(Boolean).join(' · ') || (r.onboarded ? '' : 'Onboarding not finished')}</div></td>
               <td style={{ fontSize: 12.5 }}>{r.owner}</td>
               <td><span className={'pill ' + (r.status === 'active' ? 'good' : r.status === 'suspended' ? 'bad' : 'warn')}>{r.status === 'pending' ? 'Awaiting activation' : r.status === 'suspended' ? 'Paused' : 'Active'}</span></td>
               <td><Tick ok={r.ai} /></td><td><Tick ok={r.wa} /></td><td><Tick ok={r.meta} /></td><td><Tick ok={r.pay} /></td>

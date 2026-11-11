@@ -10,6 +10,7 @@ import {
 import AdminSecret from '@/components/AdminSecret';
 import { fmtDT } from '@/lib/path';
 import Flash from '@/components/Flash';
+import { label } from '@/lib/accountType';
 
 export const dynamic = 'force-dynamic';
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -57,7 +58,7 @@ export default async function AccountDetail({ params, searchParams }: { params: 
       <div className="head"><div>
         <p><Link href="/admin">← All accounts</Link></p>
         <h1>{b.name} <span className={'pill ' + (b.status === 'active' ? 'good' : b.status === 'suspended' ? 'bad' : 'warn')}>{b.status === 'pending' ? 'Awaiting activation' : b.status === 'suspended' ? 'Paused' : 'Active'}</span></h1>
-        <p>{[b.account_type === 'agency' ? 'Agency' : 'Business owner', b.category, b.city, b.phone, owner?.email].filter(Boolean).join(' · ')}{!b.onboarded && ' · onboarding not finished'}</p>
+        <p>{[label(b.account_type), b.category, b.city, b.phone, owner?.email].filter(Boolean).join(' · ')}{!b.onboarded && ' · onboarding not finished'}</p>
       </div></div>
       <Flash searchParams={searchParams} />
       {!encrypted && <div className="flash err">The server is missing SECRETS_ENCRYPTION_KEY, so keys cannot be saved.</div>}

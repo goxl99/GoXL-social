@@ -19,7 +19,8 @@ export default function ProductForm({ p, canEdit }: { p?: P; canEdit: boolean })
             <label className="f">Category<input id="category" name="category" defaultValue={p?.category ?? ''} /></label>
             <label className="f">Selling price (₹)<input id="price" name="price" type="number" step="0.01" min="0.01" defaultValue={p?.price} required /></label>
             <label className="f">Discounted price (₹)<input id="discount_price" name="discount_price" type="number" step="0.01" min="0.01" defaultValue={p?.discount_price ?? ''} /></label>
-            <label className="f">Stock<input id="stock" name="stock" type="number" min="0" step="1" defaultValue={p?.stock ?? 0} required /></label>
+            <label className="f">Stock<input id="stock" name="stock" type="number" min="0" step="1" defaultValue={p && p.stock < 100000 ? p.stock : 0} />
+              <span className="opt" style={{ marginTop: 8, marginBottom: 0 }}><input type="checkbox" name="unlimited" defaultChecked={!!p && p.stock >= 100000} /> Unlimited: a service, course, booking or digital offer</span></label>
             <label className="f">Variants (comma separated)<input id="variants" name="variants" defaultValue={p?.variants.join(', ')} placeholder="Indigo, Mustard" /></label>
             <label className="f">Sizes (comma separated)<input id="sizes" name="sizes" defaultValue={p?.sizes.join(', ')} placeholder="S, M, L" /></label>
             <label className="f">Delivery information<input id="delivery_info" name="delivery_info" defaultValue={p?.delivery_info ?? ''} /></label>

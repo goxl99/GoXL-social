@@ -140,3 +140,10 @@ input[type=radio]{accent-color:var(--forest)}
 label.f:has(input[type=radio]:checked){border-color:var(--forest)!important;background:#F6FAEA}
 @media (max-width:860px){.btn{min-height:40px}label.f > input,label.f > select{min-height:42px}.tw{margin:0 -4px}th,td{padding:9px 10px}}
 @media (prefers-reduced-motion:reduce){.sk,.flash,.content,.btn.busy::after{animation:none!important}}
+
+/* Works as a web app on phones, tablets and desktops */
+@supports (padding:max(0px)){.top{padding-top:max(10px,env(safe-area-inset-top))}.content{padding-bottom:max(24px,env(safe-area-inset-bottom))}}
+img,video{max-width:100%}
+@media (max-width:860px){input,select,textarea{font-size:16px!important}.head{align-items:flex-start}.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.row{gap:8px}.top .muted{display:none}.cal{font-size:11px}.msgs{max-height:60vh}}
+@media (min-width:1500px){.content{max-width:1320px}}
+@media (display-mode:standalone){body{overscroll-behavior-y:none}}

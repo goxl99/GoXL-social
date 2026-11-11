@@ -27,29 +27,27 @@ export default async function Onboarding({ searchParams }: { searchParams: SP })
         <div className="card">
           <div className="st"><span className="cur">0 Account type</span></div>
           <p className="muted" style={{ fontSize: 13, margin: '0 0 10px' }}>Which of these describes you? GoXL uses this to set up your account correctly.</p>
-          <div className="grid g2">
-            <label className="f" style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 12, flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
-              <input type="radio" name="account_type" value="business" defaultChecked={v('account_type', 'business') !== 'agency'} style={{ width: 'auto', marginTop: 3 }} />
-              <span><b>Business owner</b><br /><span className="muted" style={{ fontSize: 12.5 }}>I sell my own products or services.</span></span>
-            </label>
-            <label className="f" style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 12, flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
-              <input type="radio" name="account_type" value="agency" defaultChecked={v('account_type') === 'agency'} style={{ width: 'auto', marginTop: 3 }} />
-              <span><b>Agency</b><br /><span className="muted" style={{ fontSize: 12.5 }}>I run marketing and sales for other businesses.</span></span>
-            </label>
+          <div className="grid g3">
+            {([['business', 'Business owner', 'I sell my own products or services.'], ['creator', 'Personal brand or influencer', 'I grow an audience and earn from offers, courses, collaborations or merchandise.'], ['agency', 'Agency', 'I run marketing and sales for other businesses.']] as const).map(([val, title, text]) => (
+              <label key={val} className="f" style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 12, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <input type="radio" name="account_type" value={val} defaultChecked={v('account_type', 'business') === val} style={{ width: 'auto', marginTop: 3 }} />
+                <span><b style={{ color: 'var(--ink)' }}>{title}</b><br /><span className="muted" style={{ fontSize: 12.5, fontWeight: 500 }}>{text}</span></span>
+              </label>
+            ))}
           </div>
         </div>
         <div className="card">
           <div className="st"><span className="cur">1 Business</span></div>
           <div className="grid g2">
-            <label className="f">Business or agency name<input id="name" name="name" defaultValue={v('name')} required /></label>
+            <label className="f">Business, brand or agency name<input id="name" name="name" defaultValue={v('name')} required /></label>
             <label className="f">Category<input id="category" name="category" defaultValue={v('category')} placeholder="e.g. Home textiles" /></label>
             <label className="f">WhatsApp number<input id="phone" name="phone" defaultValue={v('phone')} placeholder="+91 98765 43210" /></label>
             <label className="f">Business email<input id="email" name="email" type="email" defaultValue={v('email', user.email ?? '')} /></label>
             <label className="f">City<input id="city" name="city" defaultValue={v('city')} /></label>
             <label className="f">Delivery areas<input id="delivery_areas" name="delivery_areas" defaultValue={v('delivery_areas')} placeholder="Gujarat, Maharashtra" /></label>
           </div>
-          <label className="f">What do you sell?<textarea id="description" name="description" defaultValue={v('description')} /></label>
-          <label className="f">Who are your customers?<input id="target_customer" name="target_customer" defaultValue={v('target_customer')} /></label>
+          <label className="f">What do you sell or offer? (products, services, courses, collaborations)<textarea id="description" name="description" defaultValue={v('description')} /></label>
+          <label className="f">Who are your customers or audience?<input id="target_customer" name="target_customer" defaultValue={v('target_customer')} /></label>
         </div>
         <div className="card">
           <div className="st"><span className="cur">2 Brand and language</span></div>

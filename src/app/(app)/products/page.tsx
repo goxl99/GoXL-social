@@ -32,10 +32,10 @@ export default async function Products({ searchParams }: { searchParams: Promise
                     {canEdit ? (
                       <form action={updateStock} className="row" style={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
                         <input type="hidden" name="id" value={p.id} />
-                        <input name="stock" type="number" min="0" defaultValue={p.stock} aria-label={`Stock for ${p.name}`} style={{ width: 70, border: '1px solid var(--line)', borderRadius: 6, padding: 4 }} />
+                        <input name="stock" type="number" min="0" defaultValue={p.stock >= 100000 ? '' : p.stock} placeholder={p.stock >= 100000 ? 'Unlimited' : undefined} aria-label={`Stock for ${p.name}`} style={{ width: 70, border: '1px solid var(--line)', borderRadius: 6, padding: 4 }} />
                         <button className="btn sec sm">Set</button>
                       </form>
-                    ) : p.stock}
+                    ) : p.stock >= 100000 ? 'Unlimited' : p.stock}
                     {p.stock <= 5 && <div><span className="pill warn">Low</span></div>}
                   </td>
                   <td>{p.active ? <span className="pill good">Active</span> : <span className="pill">Hidden</span>}</td>

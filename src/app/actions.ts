@@ -56,7 +56,7 @@ export async function completeOnboarding(f: FormData) {
     if (error) go('/onboarding', 'err', friendly(error.message));
     bid = data as string;
   }
-  const accountType = str(f, 'account_type') === 'agency' ? 'agency' : 'business';
+  const accountType = ['agency', 'creator'].includes(str(f, 'account_type')) ? str(f, 'account_type') : 'business';
   const patch = { ...businessPatch(f), name, onboarded: true, account_type: accountType };
   const { error } = await db.from('businesses').update(patch).eq('id', bid);
   if (error) go(`/onboarding?finish=${bid}`, 'err', friendly(error.message));
@@ -99,7 +99,7 @@ export async function saveProduct(f: FormData) {
   const back = id ? `/products/${id}` : '/products/new';
   if (!canEdit) go('/products', 'err', 'Only owners and managers can change the catalogue.');
   const name = str(f, 'name'), sku = str(f, 'sku');
-  const price = Number(str(f, 'price')), disc = str(f, 'discount_price') ? Number(str(f, 'discount_price')) : null, stock = Math.trunc(Number(str(f, 'stock') || '0'));
+  const price = Number(str(f, 'price')), disc = str(f, 'discount_price') ? Number(str(f, 'discount_price')) : null, stock = f.get('unlimited') ? 100000 : Math.trunc(Number(str(f, 'stock') || '0'));
   if (!name) go(back, 'err', 'Enter a product name.');
   if (!sku) go(back, 'err', 'Enter a SKU.');
   if (!(price > 0)) go(back, 'err', 'Enter a selling price above zero.');
@@ -160,8 +160,9 @@ export async function deleteProduct(f: FormData) {
 
 export async function updateStock(f: FormData) {
   const { db, business, canEdit } = await getContext();
-  const stock = Math.trunc(Number(str(f, 'stock')));
   if (!canEdit) go('/products', 'err', 'Only owners and managers can change the catalogue.');
+  if (str(f, 'stock') === '') go('/products', 'msg', 'Left as unlimited. Type a number to set a stock count.');
+  const stock = Math.trunc(Number(str(f, 'stock')));
   if (!(stock >= 0)) go('/products', 'err', 'Stock cannot be negative.');
   const { error } = await db.from('products').update({ stock }).eq('id', str(f, 'id')).eq('business_id', business.id);
   if (error) go('/products', 'err', friendly(error.message));

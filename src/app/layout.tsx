@@ -13,8 +13,8 @@ const montserrat = localFont({
   variable: '--font-montserrat',
 });
 
-export const metadata: Metadata = { title: { default: 'GoXL Commerce', template: '%s · GoXL Commerce' }, description: 'Promote everywhere. Respond instantly. Convert intelligently. Deliver successfully.' };
-export const viewport: Viewport = { themeColor: '#0F2A1E', width: 'device-width', initialScale: 1 };
+export const metadata: Metadata = { title: { default: 'GoXL Commerce', template: '%s · GoXL Commerce' }, description: 'Promote everywhere. Respond instantly. Convert intelligently. Deliver successfully.', robots: { index: false, follow: false }, icons: { icon: [{ url: `${process.env.NEXT_PUBLIC_BASE_PATH ?? '/business-live'}/pwa-icon/192`, sizes: '192x192' }], apple: `${process.env.NEXT_PUBLIC_BASE_PATH ?? '/business-live'}/pwa-icon/180` }, appleWebApp: { capable: true, title: 'GoXL', statusBarStyle: 'black-translucent' } };
+export const viewport: Viewport = { themeColor: '#0F2A1E', width: 'device-width', initialScale: 1, viewportFit: 'cover' };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
