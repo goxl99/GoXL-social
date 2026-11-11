@@ -56,12 +56,13 @@ export async function completeOnboarding(f: FormData) {
     if (error) go('/onboarding', 'err', friendly(error.message));
     bid = data as string;
   }
-  const patch = { ...businessPatch(f), name, onboarded: true };
+  const accountType = str(f, 'account_type') === 'agency' ? 'agency' : 'business';
+  const patch = { ...businessPatch(f), name, onboarded: true, account_type: accountType };
   const { error } = await db.from('businesses').update(patch).eq('id', bid);
   if (error) go(`/onboarding?finish=${bid}`, 'err', friendly(error.message));
   await db.from('social_accounts').upsert(['instagram', 'facebook', 'whatsapp'].map((platform) => ({ business_id: bid, platform })), { onConflict: 'business_id,platform', ignoreDuplicates: true });
   (await cookies()).set('gx_biz', bid, { path: process.env.NEXT_PUBLIC_BASE_PATH ?? '/business-live', httpOnly: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * 365 });
-  redirect('/dashboard?msg=' + encodeURIComponent('Your business is set up. Add your first product next.'));
+  redirect('/pending');
 }
 
 async function uploadImage(client: Awaited<ReturnType<typeof getClient>>, path: string, file: File) {

@@ -20,14 +20,28 @@ export default async function Onboarding({ searchParams }: { searchParams: SP })
     <div className="wiz">
       <div className="brand" style={{ padding: '0 0 14px' }}><div className="mark">GX</div><div><b>GoXL Commerce</b><span>CLARITY BEFORE ACTION</span></div></div>
       <h1>Set up your business</h1>
-      <p className="muted" style={{ margin: '4px 0 16px' }}>Three short sections. The AI assistant and your creatives will use these details, so you only enter them once.</p>
+      <p className="muted" style={{ margin: '4px 0 16px' }}>Four short sections. The AI assistant and your creatives will use these details, so you only enter them once.</p>
       <Flash searchParams={searchParams} />
       <form action={completeOnboarding} className="stack">
         {finish && <input type="hidden" name="bid" value={finish} />}
         <div className="card">
+          <div className="st"><span className="cur">0 Account type</span></div>
+          <p className="muted" style={{ fontSize: 13, margin: '0 0 10px' }}>Which of these describes you? GoXL uses this to set up your account correctly.</p>
+          <div className="grid g2">
+            <label className="f" style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 12, flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+              <input type="radio" name="account_type" value="business" defaultChecked={v('account_type', 'business') !== 'agency'} style={{ width: 'auto', marginTop: 3 }} />
+              <span><b>Business owner</b><br /><span className="muted" style={{ fontSize: 12.5 }}>I sell my own products or services.</span></span>
+            </label>
+            <label className="f" style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 12, flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+              <input type="radio" name="account_type" value="agency" defaultChecked={v('account_type') === 'agency'} style={{ width: 'auto', marginTop: 3 }} />
+              <span><b>Agency</b><br /><span className="muted" style={{ fontSize: 12.5 }}>I run marketing and sales for other businesses.</span></span>
+            </label>
+          </div>
+        </div>
+        <div className="card">
           <div className="st"><span className="cur">1 Business</span></div>
           <div className="grid g2">
-            <label className="f">Business name<input id="name" name="name" defaultValue={v('name')} required /></label>
+            <label className="f">Business or agency name<input id="name" name="name" defaultValue={v('name')} required /></label>
             <label className="f">Category<input id="category" name="category" defaultValue={v('category')} placeholder="e.g. Home textiles" /></label>
             <label className="f">WhatsApp number<input id="phone" name="phone" defaultValue={v('phone')} placeholder="+91 98765 43210" /></label>
             <label className="f">Business email<input id="email" name="email" type="email" defaultValue={v('email', user.email ?? '')} /></label>

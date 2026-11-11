@@ -1,10 +1,11 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getClient } from '@/lib/supabase/server';
+import { isSuperAdmin } from '@/lib/admin';
 
 export type Role = 'owner' | 'manager' | 'sales' | 'fulfilment';
 export type Business = {
-  id: string; name: string; brand_primary: string; brand_accent: string; logo_path: string | null; onboarded: boolean;
+  id: string; name: string; brand_primary: string; brand_accent: string; logo_path: string | null; onboarded: boolean; status: 'pending' | 'active' | 'suspended';
 };
 export type Membership = { role: Role; business: Business };
 
@@ -19,7 +20,7 @@ export async function getContext() {
   if (!user) redirect('/login');
   const db = client.schema('gx');
   const load = async () => {
-    const { data } = await db.from('members').select('role, business:businesses(id,name,brand_primary,brand_accent,logo_path,onboarded)').eq('user_id', user.id);
+    const { data } = await db.from('members').select('role, business:businesses(id,name,brand_primary,brand_accent,logo_path,onboarded,status)').eq('user_id', user.id);
     return ((data ?? []) as unknown as Membership[]).filter((m) => m.business);
   };
   let memberships = await load();
@@ -29,7 +30,15 @@ export async function getContext() {
   }
   if (!memberships.length) redirect('/onboarding');
   const wanted = (await cookies()).get('gx_biz')?.value;
-  const current = memberships.find((m) => m.business.id === wanted) ?? memberships[0];
+  // New accounts wait for a GoXL administrator to activate them. Administrators can open any of their own accounts.
+  const superAdmin = memberships.some((m) => m.business.status !== 'active') ? await isSuperAdmin(user.id, user.email) : false;
+  const usable = superAdmin ? memberships : memberships.filter((m) => m.business.status === 'active');
+  const current = usable.find((m) => m.business.id === wanted) ?? usable[0];
+  if (!current) {
+    const unfinished = memberships.find((m) => !m.business.onboarded);
+    if (unfinished) redirect('/onboarding?finish=' + unfinished.business.id);
+    redirect('/pending');
+  }
   if (!current.business.onboarded) redirect('/onboarding?finish=' + current.business.id);
-  return { client, db, user, memberships, current, business: current.business, role: current.role, canEdit: current.role === 'owner' || current.role === 'manager' };
+  return { client, db, user, memberships: usable, current, business: current.business, role: current.role, canEdit: current.role === 'owner' || current.role === 'manager' };
 }

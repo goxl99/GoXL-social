@@ -28,6 +28,8 @@ export async function publishPost(postId: string): Promise<{ ok: boolean; error?
     return { ok: false, error };
   };
   try {
+    const { data: biz } = await db.from('businesses').select('status').eq('id', locked.business_id).maybeSingle();
+    if (biz?.status !== 'active') return await fail('This account is not active.');
     if (!process.env.NEXT_PUBLIC_APP_URL) return await fail('NEXT_PUBLIC_APP_URL is not set, so Meta cannot fetch the image.');
     if (!locked.creative_id) return await fail('This campaign has no creative.');
     const [{ data: acct }, token, { data: camp }, { data: cre }, { data: wa }] = await Promise.all([

@@ -2,9 +2,11 @@ import Link from 'next/link';
 import { getContext, publicUrl } from '@/lib/context';
 import { signOut, switchBusiness } from '@/app/actions';
 import NavLinks from '@/components/NavLinks';
+import { isSuperAdmin } from '@/lib/admin';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { memberships, business, role, user } = await getContext();
+  const superAdmin = await isSuperAdmin(user.id, user.email);
   return (
     <div className="shell">
       <input type="checkbox" id="navtoggle" className="navtoggle" aria-label="Toggle menu" />
@@ -20,6 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </form>
         <NavLinks />
+        {superAdmin && <Link className="btn sm" style={{ margin: '12px 8px 0' }} href="/admin">Super admin console</Link>}
         <div className="sidefoot">Promote everywhere. Respond instantly. Convert intelligently. Deliver successfully.</div>
       </aside>
       <label htmlFor="navtoggle" className="scrim" />

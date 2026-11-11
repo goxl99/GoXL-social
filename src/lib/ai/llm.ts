@@ -1,5 +1,6 @@
 import { admin } from '@/lib/supabase/admin';
 import { getSecret } from '@/lib/secrets';
+import { getPlatformSecret } from '@/lib/admin';
 
 export type Provider = 'anthropic' | 'openai';
 export type AIConfig = { provider: Provider; key: string; model: string };
@@ -10,12 +11,13 @@ export const DEFAULT_MODEL: Record<Provider, string> = {
   openai: process.env.OPENAI_MODEL || 'gpt-4o-mini',
 };
 
-/** The account's own key first; GoXL's platform key (server environment) only as a fallback. Null means rules-only mode. */
+/** The account's own key first; then the GoXL default key saved in the admin console; then the server environment. Null means rules-only mode. */
 export async function resolveAI(bid: string): Promise<AIConfig | null> {
   const { data: b } = await admin().from('businesses').select('ai_provider,ai_model').eq('id', bid).single();
   const provider = (b?.ai_provider === 'openai' ? 'openai' : 'anthropic') as Provider;
   let key: string | null = null;
   try { key = await getSecret(bid, provider === 'openai' ? 'ai_openai_key' : 'ai_anthropic_key'); } catch { key = null; }
+  if (!key) { try { key = await getPlatformSecret(provider === 'openai' ? 'ai_openai_key' : 'ai_anthropic_key'); } catch { key = null; } }
   key = key || (provider === 'openai' ? process.env.OPENAI_API_KEY : process.env.ANTHROPIC_API_KEY) || null;
   return key ? { provider, key, model: b?.ai_model || DEFAULT_MODEL[provider] } : null;
 }

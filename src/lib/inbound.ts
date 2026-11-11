@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { getPlatformSecret } from '@/lib/admin';
 import { admin } from '@/lib/supabase/admin';
 import { decide, type Biz, type Draft, type Product, type Turn } from '@/lib/ai/assistant';
 import { sendWhatsAppImage, sendWhatsAppText } from '@/lib/meta';
@@ -31,6 +32,8 @@ export async function handleWhatsAppPayload(payload: any) { // eslint-disable-li
       const { data: acct } = await db.from('social_accounts').select('business_id').eq('platform', 'whatsapp').eq('external_id', phoneNumberId).maybeSingle();
       if (!acct) continue;
       const bid = acct.business_id as string;
+      const { data: biz } = await db.from('businesses').select('status').eq('id', bid).maybeSingle();
+      if (biz?.status !== 'active') continue; // pending or suspended accounts do not receive customer messages
       for (const m of v.messages as WaMessage[]) {
         const name: string = v.contacts?.find((c: any) => c.wa_id === m.from)?.profile?.name ?? m.from; // eslint-disable-line @typescript-eslint/no-explicit-any
         const body = textOf(m) || (m.type === 'image' ? '[Customer sent an image]' : `[Unsupported message: ${m.type}]`);
@@ -147,6 +150,7 @@ export async function appSecretForPayload(payload: any): Promise<string | undefi
     const { data } = await admin().from('social_accounts').select('business_id').eq('platform', 'whatsapp').eq('external_id', pid).maybeSingle();
     if (data) { const own = await getSecret(data.business_id, 'meta_app_secret'); if (own) return own; }
   }
+  try { const shared = await getPlatformSecret('meta_app_secret'); if (shared) return shared; } catch { /* fall through to env */ }
   return process.env.META_APP_SECRET || undefined;
 }
 
