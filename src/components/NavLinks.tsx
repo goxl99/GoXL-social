@@ -4,8 +4,8 @@ import { usePathname } from 'next/navigation';
 
 const GROUPS: [string, [string, string, boolean][]][] = [
   ['Set up', [['/dashboard', 'Overview', true], ['/business', 'My Business', true], ['/social', 'Social Accounts', true]]],
-  ['Promote', [['/studio', 'AI Creative Studio', false], ['/campaigns', 'Campaigns', false], ['/calendar', 'Content Calendar', false]]],
-  ['Convert', [['/inbox', 'Unified Inbox', false], ['/assistant', 'AI Sales Assistant', false], ['/products', 'Products & Catalogue', true], ['/leads', 'Leads & CRM', false], ['/orders', 'Orders', false], ['/payments', 'Payments', false], ['/deliveries', 'Deliveries', false], ['/automation', 'Automation Centre', false]]],
+  ['Promote', [['/studio', 'AI Creative Studio', true], ['/campaigns', 'Campaigns', true], ['/calendar', 'Content Calendar', true]]],
+  ['Convert', [['/inbox', 'Unified Inbox', true], ['/assistant', 'AI Sales Assistant', true], ['/products', 'Products & Catalogue', true], ['/leads', 'Leads & CRM', true], ['/orders', 'Orders', false], ['/payments', 'Payments', false], ['/deliveries', 'Deliveries', false], ['/automation', 'Automation Centre', false]]],
   ['Manage', [['/analytics', 'Analytics', false], ['/team', 'Team Management', true], ['/agency', 'Agency Management', false], ['/settings', 'Settings', false]]],
 ];
 

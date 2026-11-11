@@ -1,19 +1,23 @@
 import { getContext } from '@/lib/context';
+import { connectChannel, disconnectChannel } from '@/app/actions2';
+import Flash from '@/components/Flash';
 
-const INFO: Record<string, { name: string; needs: string[]; note: string }> = {
-  instagram: { name: 'Instagram', needs: ['Instagram professional account', 'Linked Facebook Page', 'Meta app with Instagram API and app review for content publishing and messaging'], note: 'Posts, stories and reels publish through the official API. Direct messages arrive by webhook.' },
-  facebook: { name: 'Facebook Page', needs: ['Facebook Page you manage', 'Meta app with pages_manage_posts and pages_messaging after app review'], note: 'Posts, photos, videos and stories publish through the API. Messenger inquiries arrive by webhook.' },
-  whatsapp: { name: 'WhatsApp', needs: ['WhatsApp Business Platform (Cloud API) number', 'Verified business and approved message templates'], note: 'Receives and sends customer messages. Status updates cannot be published by API, so you share them from the app.' },
+const INFO: Record<string, { name: string; idLabel: string; tokenLabel: string; note: string }> = {
+  instagram: { name: 'Instagram', idLabel: 'Instagram user ID (numeric)', tokenLabel: 'Access token with instagram_content_publish', note: 'Publishes posts and stories. Needs an Instagram professional account linked to a Facebook Page. Reels need video and are not supported yet.' },
+  facebook: { name: 'Facebook Page', idLabel: 'Page ID (numeric)', tokenLabel: 'Page access token with pages_manage_posts', note: 'Publishes photo posts and stories to your Page.' },
+  whatsapp: { name: 'WhatsApp', idLabel: 'Phone number ID (numeric)', tokenLabel: 'Permanent access token for the WhatsApp Cloud API', note: 'Receives customer messages and sends the AI assistant replies. WhatsApp Status cannot be posted by API, so the app gives you the image and caption to share.' },
 };
 
-export default async function Social() {
-  const { db, business } = await getContext();
+export default async function Social({ searchParams }: { searchParams: Promise<{ msg?: string; err?: string }> }) {
+  const { db, business, canEdit } = await getContext();
   const { data } = await db.from('social_accounts').select('*').eq('business_id', business.id);
-  const rows = ['instagram', 'facebook', 'whatsapp'].map((p) => data?.find((d) => d.platform === p) ?? { platform: p, status: 'disconnected', handle: null, token_expires_at: null });
+  const rows = ['instagram', 'facebook', 'whatsapp'].map((p) => data?.find((d) => d.platform === p) ?? { platform: p, status: 'disconnected', handle: null, connected_at: null });
+  const app = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/$/, '');
   return (
     <>
-      <div className="head"><div><h1>Social Accounts</h1><p>Connections to Instagram, Facebook and WhatsApp through the official Meta APIs.</p></div></div>
-      <div className="note" style={{ marginBottom: 16 }}>The connect buttons switch on when your Meta app credentials are added (see README, "Connecting Meta"). Meta requires app review before it allows publishing and messaging for other people's accounts, and that cannot be skipped from the code side. Until then this screen shows the real connection state and what each platform needs.</div>
+      <div className="head"><div><h1>Social Accounts</h1><p>Connect your own Instagram, Facebook Page and WhatsApp number using the official Meta APIs.</p></div></div>
+      <Flash searchParams={searchParams} />
+      <div className="note" style={{ marginBottom: 16 }}>For accounts you own, you can connect with an ID and access token from your Meta app. We check them with Meta before saving, and the token is stored where only the server can read it. Connecting accounts that belong to other people needs Meta app review.</div>
       <div className="grid g3">
         {rows.map((r) => {
           const i = INFO[r.platform];
@@ -21,16 +25,34 @@ export default async function Social() {
           return (
             <div className="card" key={r.platform}>
               <div className="row sb"><h2>{i.name}</h2><span className={'pill ' + (ok ? 'good' : r.status === 'expired' ? 'bad' : '')}>{ok ? 'Connected' : r.status === 'expired' ? 'Token expired' : 'Not connected'}</span></div>
-              <dl style={{ margin: '12px 0', fontSize: 13 }}>
-                <dt className="muted" style={{ fontWeight: 600 }}>Account</dt><dd style={{ margin: '0 0 8px' }}>{r.handle ?? 'None'}</dd>
-                <dt className="muted" style={{ fontWeight: 600 }}>Token valid until</dt><dd style={{ margin: 0 }}>{r.token_expires_at ? new Date(r.token_expires_at).toLocaleDateString('en-IN') : '-'}</dd>
-              </dl>
-              <p className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>{i.note}</p>
-              <details><summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 12.5 }}>What you need</summary><ul style={{ fontSize: 12.5, paddingLeft: 18 }}>{i.needs.map((n) => <li key={n}>{n}</li>)}</ul></details>
-              <button className="btn" style={{ marginTop: 12 }} disabled title="Needs Meta app credentials">Connect</button>
+              <p style={{ margin: '10px 0 4px', fontSize: 13 }}><b>Account:</b> {r.handle ?? 'None'}</p>
+              <p className="muted" style={{ fontSize: 12.5, marginBottom: 10 }}>{i.note}</p>
+              {canEdit && (
+                <details open={!ok}>
+                  <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 12.5 }}>{ok ? 'Replace token' : 'Connect'}</summary>
+                  <form action={connectChannel} style={{ marginTop: 10 }}>
+                    <input type="hidden" name="platform" value={r.platform} />
+                    <label className="f">{i.idLabel}<input name="external_id" inputMode="numeric" required /></label>
+                    <label className="f">{i.tokenLabel}<input name="token" type="password" autoComplete="off" required /></label>
+                    <button className="btn pri sm">Verify and connect</button>
+                  </form>
+                </details>
+              )}
+              {canEdit && ok && (
+                <form action={disconnectChannel} style={{ marginTop: 10 }}><input type="hidden" name="platform" value={r.platform} /><button className="btn bad sm">Disconnect and delete token</button></form>
+              )}
             </div>
           );
         })}
+      </div>
+      <div className="card" style={{ marginTop: 16 }}>
+        <h2>WhatsApp webhook</h2>
+        <p className="muted" style={{ fontSize: 13, margin: '6px 0' }}>In your Meta app, open WhatsApp, then Configuration, and set:</p>
+        <ul style={{ fontSize: 13, paddingLeft: 18 }}>
+          <li>Callback URL: <span className="mono">{app ? `${app}/api/webhooks/whatsapp` : 'set NEXT_PUBLIC_APP_URL first'}</span></li>
+          <li>Verify token: the value of <span className="mono">WHATSAPP_VERIFY_TOKEN</span> in your hosting settings</li>
+          <li>Subscribe to the <span className="mono">messages</span> field</li>
+        </ul>
       </div>
     </>
   );

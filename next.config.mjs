@@ -4,5 +4,7 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '/business-live';
 const nextConfig = {
   basePath,
   experimental: { serverActions: { bodySizeLimit: '25mb' } },
+  outputFileTracingIncludes: { '/api/creative/[id]/image': ['./src/assets/fonts/**/*'] },
+  serverExternalPackages: ['sharp'],
 };
 export default nextConfig;

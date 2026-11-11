@@ -68,3 +68,15 @@ You need a Meta developer app, a verified business, and Meta app review for the 
 | 3 | WhatsApp webhook, inbox, AI assistant over the catalogue, CRM, human takeover |
 | 4 | Orders, Razorpay payment links and webhook verification, dispatch, delivery updates |
 | 5 | Instagram and Facebook messaging, analytics, agency dashboards, billing |
+
+## Stage 2 and 3: publishing, inbox and AI assistant
+
+Server environment variables (see `.env.example`): `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL` (public URL including `/business-live`), `ANTHROPIC_API_KEY`, `META_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`, `CRON_SECRET`.
+
+1. **Supabase**: Settings > API > Exposed schemas must include `gx`. Authentication > URL configuration: set the Site URL to the app URL and add `<app URL>/auth/callback` as a redirect.
+2. **Connect accounts** in Social Accounts with the numeric ID and an access token from your Meta app (verified against Meta before saving; tokens live in `gx.channel_secrets`, readable only by the server).
+3. **WhatsApp webhook**: callback `<app URL>/api/webhooks/whatsapp`, verify token = `WHATSAPP_VERIFY_TOKEN`, subscribe to `messages`. Payload signatures are checked with `META_APP_SECRET`.
+4. **Scheduled posts**: call `GET <app URL>/api/cron/publish` with `Authorization: Bearer <CRON_SECRET>` every 5 minutes (Supabase pg_cron + pg_net, or any scheduler; Vercel Hobby cron is daily only).
+5. Try the AI assistant without WhatsApp from the inbox test box.
+
+Not in this release: reels/video, WhatsApp Status API posting (not offered by Meta), orders, Razorpay and dispatch (Stage 4).
