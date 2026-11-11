@@ -40,7 +40,18 @@ npm install
 npm run dev
 ```
 
-## Deploy
+## Deploy at goxl.in/business-live
+
+The app is built to live under the path `/business-live` (`basePath` in `next.config.mjs`, override with `NEXT_PUBLIC_BASE_PATH`; use an empty value for a subdomain such as business.goxl.in).
+
+1. Deploy this repo as its own project (for example on Vercel) with `NEXT_PUBLIC_BASE_PATH=/business-live`.
+2. Make `https://goxl.in/business-live/*` reach that deployment. The method depends on where goxl.in is hosted:
+   - Vercel: in the goxl.in project add a rewrite `{ "source": "/business-live/:path*", "destination": "https://<deployment>.vercel.app/business-live/:path*" }`.
+   - Cloudflare, nginx or another proxy: proxy `/business-live/` to the deployment, passing the path through unchanged.
+   - WordPress or shared hosting without a proxy: use a subdomain instead (CNAME `business.goxl.in` to the deployment, `NEXT_PUBLIC_BASE_PATH=` empty).
+3. Supabase > Authentication > URL Configuration: Site URL `https://goxl.in/business-live`, redirect URL `https://goxl.in/business-live/auth/callback`.
+4. Supabase > Project Settings > Data API > Exposed schemas: add `gx`.
+
 
 Push to GitHub and import the repo in Vercel (or any Node host). Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Keep `SUPABASE_SERVICE_ROLE_KEY` server-side only.
 

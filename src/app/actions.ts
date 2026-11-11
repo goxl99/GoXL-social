@@ -26,7 +26,7 @@ export async function signOut() {
 }
 
 export async function switchBusiness(f: FormData) {
-  (await cookies()).set('gx_biz', str(f, 'id'), { path: '/', httpOnly: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * 365 });
+  (await cookies()).set('gx_biz', str(f, 'id'), { path: process.env.NEXT_PUBLIC_BASE_PATH ?? '/business-live', httpOnly: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * 365 });
   redirect('/dashboard');
 }
 
@@ -60,7 +60,7 @@ export async function completeOnboarding(f: FormData) {
   const { error } = await db.from('businesses').update(patch).eq('id', bid);
   if (error) go(`/onboarding?finish=${bid}`, 'err', friendly(error.message));
   await db.from('social_accounts').upsert(['instagram', 'facebook', 'whatsapp'].map((platform) => ({ business_id: bid, platform })), { onConflict: 'business_id,platform', ignoreDuplicates: true });
-  (await cookies()).set('gx_biz', bid, { path: '/', httpOnly: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * 365 });
+  (await cookies()).set('gx_biz', bid, { path: process.env.NEXT_PUBLIC_BASE_PATH ?? '/business-live', httpOnly: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * 365 });
   redirect('/dashboard?msg=' + encodeURIComponent('Your business is set up. Add your first product next.'));
 }
 

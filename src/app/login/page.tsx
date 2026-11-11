@@ -2,6 +2,8 @@
 import { useState } from 'react';
 import { browserClient } from '@/lib/supabase/client';
 
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '/business-live';
+
 export default function Login() {
   const [mode, setMode] = useState<'in' | 'up'>('in');
   const [email, setEmail] = useState('');
@@ -18,12 +20,12 @@ export default function Login() {
     if (mode === 'in') {
       const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error) { setErr(error.message); setBusy(false); return; }
-      window.location.href = '/dashboard';
+      window.location.href = `${BASE}/dashboard`;
     } else {
       if (password.length < 8) { setErr('Use a password with at least 8 characters.'); setBusy(false); return; }
-      const { data, error } = await sb.auth.signUp({ email, password, options: { data: { full_name: name }, emailRedirectTo: `${window.location.origin}/auth/callback` } });
+      const { data, error } = await sb.auth.signUp({ email, password, options: { data: { full_name: name }, emailRedirectTo: `${window.location.origin}${BASE}/auth/callback` } });
       if (error) { setErr(error.message); setBusy(false); return; }
-      if (data.session) window.location.href = '/dashboard';
+      if (data.session) window.location.href = `${BASE}/dashboard`;
       else { setInfo('Check your email and open the confirmation link to finish signing up.'); setBusy(false); }
     }
   }
