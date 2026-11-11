@@ -1,3 +1,4 @@
+import { complete, type AIConfig, type Msg } from '@/lib/ai/llm';
 // Sales assistant. Grounded in the catalogue: the LLM may only use facts passed in, and every rupee amount in its reply is
 // checked against real prices. Anything that fails the check, or any LLM error, falls back to the deterministic rules engine.
 
@@ -213,10 +214,9 @@ function extractJson(text: string): Record<string, unknown> | null {
   try { return JSON.parse(text.slice(a, b + 1)); } catch { return null; }
 }
 
-export async function llmDecide(biz: Biz, products: Product[], history: Turn[], draft: Draft): Promise<Decision | null> {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) return null;
-  const msgs: { role: 'user' | 'assistant'; content: string }[] = [];
+export async function llmDecide(biz: Biz, products: Product[], history: Turn[], draft: Draft, ai: AIConfig | null): Promise<Decision | null> {
+  if (!ai) return null;
+  const msgs: Msg[] = [];
   for (const t of history.slice(-16)) {
     if (t.sender === 'system') continue;
     const role = t.sender === 'customer' ? 'user' : 'assistant';
@@ -225,27 +225,18 @@ export async function llmDecide(biz: Biz, products: Product[], history: Turn[], 
   }
   while (msgs.length && msgs[0].role !== 'user') msgs.shift();
   if (!msgs.length || msgs[msgs.length - 1].role !== 'user') return null;
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 20000);
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST', signal: ctrl.signal,
-      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5', max_tokens: 700, system: systemPrompt(biz, products) + `\n\nCURRENT ORDER DRAFT: ${JSON.stringify(draft)}`, messages: msgs }),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const j = extractJson(String(data?.content?.[0]?.text ?? ''));
-    if (!j || typeof j.reply !== 'string' || !j.reply.trim()) return null;
-    const sku = typeof j.product_sku === 'string' && products.some((p) => p.sku === j.product_sku) ? (j.product_sku as string) : null;
-    const d = (j.draft && typeof j.draft === 'object' ? j.draft : {}) as Draft;
-    return { reply: j.reply.trim().slice(0, 900), intent: String(j.intent ?? 'other'), product_sku: sku, handoff: !!j.handoff, ready_to_order: !!j.ready_to_order, draft: { ...draft, ...d }, send_photo: !!j.send_photo, source: 'llm' };
-  } catch { return null; } finally { clearTimeout(timer); }
+  const r = await complete(ai, systemPrompt(biz, products) + `\n\nCURRENT ORDER DRAFT: ${JSON.stringify(draft)}`, msgs, 700);
+  if ('error' in r) return null;
+  const j = extractJson(r.text);
+  if (!j || typeof j.reply !== 'string' || !j.reply.trim()) return null;
+  const sku = typeof j.product_sku === 'string' && products.some((p) => p.sku === j.product_sku) ? (j.product_sku as string) : null;
+  const d = (j.draft && typeof j.draft === 'object' ? j.draft : {}) as Draft;
+  return { reply: j.reply.trim().slice(0, 900), intent: String(j.intent ?? 'other'), product_sku: sku, handoff: !!j.handoff, ready_to_order: !!j.ready_to_order, draft: { ...draft, ...d }, send_photo: !!j.send_photo, source: 'llm' };
 }
 
 /** Main entry: LLM when configured and grounded, otherwise rules. Never returns an ungrounded price. */
-export async function decide(biz: Biz, products: Product[], history: Turn[], draft: Draft, currentSku: string | null): Promise<Decision> {
-  const llm = await llmDecide(biz, products, history, draft);
+export async function decide(biz: Biz, products: Product[], history: Turn[], draft: Draft, currentSku: string | null, ai: AIConfig | null = null): Promise<Decision> {
+  const llm = await llmDecide(biz, products, history, draft, ai);
   if (llm) {
     const p = products.find((x) => x.sku === (llm.product_sku ?? llm.draft.sku));
     const stockOk = !llm.ready_to_order || (!!p && p.stock >= (llm.draft.qty ?? 1));

@@ -29,7 +29,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       <Flash searchParams={searchParams} />
       <div className="tiles">
         <div className="tile hero"><div className="l">Products live</div><div className="v">{products}</div><div className="s">{low} low on stock</div></div>
-        <div className="tile"><div className="l">Total inquiries</div><div className="v">{convs}</div><div className="s">arrives with the inbox</div></div>
+        <div className="tile"><div className="l">Total inquiries</div><div className="v">{convs}</div><div className="s">all time</div></div>
         <div className="tile"><div className="l">Orders</div><div className="v">{orders}</div><div className="s">{pending} awaiting payment</div></div>
         <div className="tile"><div className="l">Connected accounts</div><div className="v">{connected}</div><div className="s">of 3 platforms</div></div>
         <div className="tile"><div className="l">Team members</div><div className="v">{members}</div></div>

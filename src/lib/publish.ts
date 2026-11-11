@@ -2,6 +2,7 @@ import { admin } from '@/lib/supabase/admin';
 import { publishFacebook, publishInstagram } from '@/lib/meta';
 import { appUrl } from '@/lib/inbound';
 import { fullCaption } from '@/lib/creative';
+import { getChannelToken } from '@/lib/secrets';
 
 export const waLink = (phone: string | null | undefined, code: string | null | undefined) =>
   phone ? `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi, I saw your post. ${code ? 'Ref ' + code : ''}`.trim())}` : null;
@@ -29,20 +30,20 @@ export async function publishPost(postId: string): Promise<{ ok: boolean; error?
   try {
     if (!process.env.NEXT_PUBLIC_APP_URL) return await fail('NEXT_PUBLIC_APP_URL is not set, so Meta cannot fetch the image.');
     if (!locked.creative_id) return await fail('This campaign has no creative.');
-    const [{ data: acct }, { data: sec }, { data: camp }, { data: cre }, { data: wa }] = await Promise.all([
+    const [{ data: acct }, token, { data: camp }, { data: cre }, { data: wa }] = await Promise.all([
       db.from('social_accounts').select('external_id,status').eq('business_id', locked.business_id).eq('platform', locked.platform).maybeSingle(),
-      db.from('channel_secrets').select('access_token').eq('business_id', locked.business_id).eq('platform', locked.platform).maybeSingle(),
+      getChannelToken(locked.business_id, locked.platform),
       db.from('campaigns').select('code').eq('id', locked.campaign_id).single(),
       db.from('creatives').select('caption,hashtags,approved').eq('id', locked.creative_id).single(),
       db.from('social_accounts').select('handle').eq('business_id', locked.business_id).eq('platform', 'whatsapp').maybeSingle(),
     ]);
-    if (!acct?.external_id || acct.status !== 'connected' || !sec) return await fail(`${locked.platform} is not connected.`);
+    if (!acct?.external_id || acct.status !== 'connected' || !token) return await fail(`${locked.platform} is not connected.`);
     if (!cre?.approved) return await fail('The creative is not approved.');
     const caption = locked.caption || postCaption(cre, camp?.code ?? null, wa?.handle ?? null);
     const url = imageUrl(locked.creative_id, locked.platform, locked.format);
     const id = locked.platform === 'instagram'
-      ? await publishInstagram(acct.external_id, sec.access_token, locked.format, url, caption)
-      : await publishFacebook(acct.external_id, sec.access_token, locked.format, url, caption);
+      ? await publishInstagram(acct.external_id, token, locked.format, url, caption)
+      : await publishFacebook(acct.external_id, token, locked.format, url, caption);
     await db.from('posts').update({ status: 'published', external_id: String(id), published_at: new Date().toISOString(), attempts: locked.attempts + 1 }).eq('id', postId);
     return { ok: true };
   } catch (e) {

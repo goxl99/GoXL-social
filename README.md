@@ -80,3 +80,13 @@ Server environment variables (see `.env.example`): `SUPABASE_SERVICE_ROLE_KEY`, 
 5. Try the AI assistant without WhatsApp from the inbox test box.
 
 Not in this release: reels/video, WhatsApp Status API posting (not offered by Meta), orders, Razorpay and dispatch (Stage 4).
+
+## Per-account keys (Settings)
+
+Each business adds its own keys in **Settings**: Claude or OpenAI API key (and the provider choice), Meta app secret, and Razorpay key ID, key secret and webhook secret. WhatsApp, Instagram and Facebook tokens go in **Social Accounts**. Everything is encrypted with `SECRETS_ENCRYPTION_KEY` before it is stored and is only readable by the server; the browser only ever sees the last four characters. Only the account owner can change keys. Platform-level `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `META_APP_SECRET` are optional fallbacks.
+
+Webhooks: WhatsApp `<app>/api/webhooks/whatsapp` (verify token shown per account in Settings), Razorpay `<app>/api/webhooks/razorpay?b=<business id>` (shown in Settings), event `payment_link.paid`.
+
+## Stage 4: orders, payments, dispatch
+
+Orders come from an inbox draft or are entered by hand, reserve stock, and get a Razorpay payment link sent on WhatsApp. An order becomes paid only through a verified Razorpay payment (webhook, or "Check payment status", or an owner/manager recording a manual payment). Dispatch needs a paid order and notifies the customer with tracking.

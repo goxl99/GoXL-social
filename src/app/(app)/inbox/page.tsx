@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getContext } from '@/lib/context';
 import { fmtDT } from '@/lib/path';
+import { createOrderFromConversation } from '@/app/actions4';
 import { sendReply, toggleAI, claimConversation, setStage, setFollowUp, testMessage, rerunAssistant } from '@/app/actions2';
 import AutoRefresh from '@/components/AutoRefresh';
 import Flash from '@/components/Flash';
@@ -58,7 +59,12 @@ export default async function Inbox({ searchParams }: { searchParams: Promise<{ 
             <div className="msgs">
               {msgs?.map((m) => <div key={m.id} className={'bub ' + m.sender}>{m.body}<small>{m.sender === 'ai' ? 'AI assistant' : m.sender === 'human' ? 'Team' : m.sender === 'customer' ? 'Customer' : 'Note'} · {fmtDT(m.created_at)}</small></div>)}
             </div>
-            {sel.draft_order && Object.keys(sel.draft_order as object).length > 0 && <div className="note" style={{ margin: '0 14px 10px' }}>Order draft: <span className="mono">{JSON.stringify(sel.draft_order)}</span></div>}
+            {sel.draft_order && Object.keys(sel.draft_order as object).length > 0 && (
+              <div className="note" style={{ margin: '0 14px 10px' }}>
+                Order draft: <span className="mono">{JSON.stringify(sel.draft_order)}</span>
+                {works && (sel.draft_order as { sku?: string; address?: string }).sku && (sel.draft_order as { address?: string }).address && <form action={createOrderFromConversation} style={{ marginTop: 8 }}><input type="hidden" name="id" value={sel.id} /><button className="btn pri sm">Create order from this draft</button></form>}
+              </div>
+            )}
             {works && (
               <div style={{ padding: 14, borderTop: '1px solid var(--line)' }} className="stack">
                 <form action={sendReply} className="row" style={{ flexWrap: 'nowrap', alignItems: 'flex-end' }}>

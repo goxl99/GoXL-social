@@ -2,6 +2,8 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { admin } from '@/lib/supabase/admin';
 import { decide, type Biz, type Draft, type Product, type Turn } from '@/lib/ai/assistant';
 import { sendWhatsAppImage, sendWhatsAppText } from '@/lib/meta';
+import { resolveAI } from '@/lib/ai/llm';
+import { getChannelToken, getSecret } from '@/lib/secrets';
 
 export const BUCKET = 'gx-business-assets';
 const pub = (path: string) => `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`;
@@ -84,7 +86,7 @@ export async function runAssistant(conversationId: string, isTest = false) {
   const draft = (conv.draft_order ?? {}) as Draft;
   const currentSku = products.find((p) => p.id === conv.product_id)?.sku ?? null;
 
-  const d = await decide(biz, products, history, draft, currentSku);
+  const d = await decide(biz, products, history, draft, currentSku, await resolveAI(bid));
   const product = products.find((p) => p.sku === (d.product_sku ?? d.draft.sku)) ?? null;
 
   await db.from('messages').insert({ business_id: bid, conversation_id: conversationId, sender: 'ai', body: d.reply, product_id: product?.id ?? null });
@@ -104,13 +106,13 @@ export async function runAssistant(conversationId: string, isTest = false) {
   }
 
   if (isTest || conv.is_test) return;
-  const { data: sec } = await db.from('channel_secrets').select('access_token').eq('business_id', bid).eq('platform', 'whatsapp').maybeSingle();
+  const token = await getChannelToken(bid, 'whatsapp');
   const { data: acct } = await db.from('social_accounts').select('external_id').eq('business_id', bid).eq('platform', 'whatsapp').maybeSingle();
   const to = (conv.customer as { phone: string } | null)?.phone;
-  if (!sec || !acct?.external_id || !to) return;
+  if (!token || !acct?.external_id || !to) return;
   try {
-    await sendWhatsAppText(acct.external_id, sec.access_token, to, d.reply);
-    if (d.send_photo && product?.image_paths[0]) await sendWhatsAppImage(acct.external_id, sec.access_token, to, pub(product.image_paths[0]), product.name);
+    await sendWhatsAppText(acct.external_id, token, to, d.reply);
+    if (d.send_photo && product?.image_paths[0]) await sendWhatsAppImage(acct.external_id, token, to, pub(product.image_paths[0]), product.name);
   } catch (e) {
     await db.from('messages').insert({ business_id: bid, conversation_id: conversationId, sender: 'system', body: `WhatsApp delivery failed: ${(e as Error).message}` });
   }
@@ -123,11 +125,11 @@ export async function sendHumanReply(conversationId: string, text: string) {
   if (!conv) throw new Error('Conversation not found');
   const bid = conv.business_id as string;
   if (conv.is_test) return;
-  const { data: sec } = await db.from('channel_secrets').select('access_token').eq('business_id', bid).eq('platform', 'whatsapp').maybeSingle();
+  const token = await getChannelToken(bid, 'whatsapp');
   const { data: acct } = await db.from('social_accounts').select('external_id').eq('business_id', bid).eq('platform', 'whatsapp').maybeSingle();
   const to = (conv.customer as unknown as { phone: string } | null)?.phone;
-  if (!sec || !acct?.external_id || !to) throw new Error('WhatsApp is not connected, so this reply was saved but not delivered.');
-  await sendWhatsAppText(acct.external_id, sec.access_token, to, text);
+  if (!token || !acct?.external_id || !to) throw new Error('WhatsApp is not connected, so this reply was saved but not delivered.');
+  await sendWhatsAppText(acct.external_id, token, to, text);
 }
 
 export function signatureOk(raw: string, header: string | null, secret: string | undefined) {
@@ -137,3 +139,21 @@ export function signatureOk(raw: string, header: string | null, secret: string |
   return given.length === expected.length && timingSafeEqual(given, expected);
 }
 
+
+/** The Meta app secret to verify a payload with: the owning account's own secret when it set one, else GoXL's shared one. */
+export async function appSecretForPayload(payload: any): Promise<string | undefined> { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const pid: string | undefined = payload?.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id;
+  if (pid) {
+    const { data } = await admin().from('social_accounts').select('business_id').eq('platform', 'whatsapp').eq('external_id', pid).maybeSingle();
+    if (data) { const own = await getSecret(data.business_id, 'meta_app_secret'); if (own) return own; }
+  }
+  return process.env.META_APP_SECRET || undefined;
+}
+
+/** Verify-token check for Meta's one-time GET handshake: any account's token, or the shared env token. */
+export async function verifyTokenValid(token: string | null): Promise<boolean> {
+  if (!token) return false;
+  if (process.env.WHATSAPP_VERIFY_TOKEN && token === process.env.WHATSAPP_VERIFY_TOKEN) return true;
+  const { data } = await admin().from('channel_config').select('business_id').eq('wa_verify_token', token).maybeSingle();
+  return !!data;
+}

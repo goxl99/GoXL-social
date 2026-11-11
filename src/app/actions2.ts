@@ -6,6 +6,8 @@ import { getContext, BUCKET } from '@/lib/context';
 import { admin, hasAdmin } from '@/lib/supabase/admin';
 import { verifyInstagram, verifyPage, verifyWhatsApp } from '@/lib/meta';
 import { generateCopy, CATEGORIES, TARGETS } from '@/lib/creative';
+import { resolveAI } from '@/lib/ai/llm';
+import { setChannelToken } from '@/lib/secrets';
 import { publishPost, postCaption } from '@/lib/publish';
 import { ingest, runAssistant, sendHumanReply } from '@/lib/inbound';
 import type { Product } from '@/lib/ai/assistant';
@@ -34,8 +36,7 @@ export async function connectChannel(f: FormData) {
     else handle = '@' + ((await verifyInstagram(id, token)).username ?? id);
   } catch (e) { return go('/social', 'err', `Meta rejected these details: ${(e as Error).message}`); }
   const db = admin();
-  const { error: e1 } = await db.from('channel_secrets').upsert({ business_id: business.id, platform, access_token: token, updated_at: new Date().toISOString() });
-  if (e1) go('/social', 'err', e1.message);
+  try { await setChannelToken(business.id, platform, token); } catch (e) { go('/social', 'err', (e as Error).message); }
   const { error: e2 } = await db.from('social_accounts').upsert({ business_id: business.id, platform, status: 'connected', handle, external_id: id, connected_at: new Date().toISOString() }, { onConflict: 'business_id,platform' });
   if (e2) go('/social', 'err', e2.message.includes('social_wa_number_uidx') ? 'That WhatsApp number is already connected to another business.' : e2.message);
   revalidatePath('/social');
@@ -67,10 +68,10 @@ export async function generateCreative(f: FormData) {
   ]);
   if (!p || !b) return go('/studio', 'err', 'Product not found.');
   const prod = { ...p, price: Number(p.price), discount_price: p.discount_price == null ? null : Number(p.discount_price) } as Product;
-  const copy = await generateCopy(b, prod, category, lang);
+  const copy = await generateCopy(b, prod, category, lang, hasAdmin() ? await resolveAI(business.id) : null);
   const { data, error } = await db.from('creatives').insert({ business_id: business.id, product_id: pid, category, language: lang, headline: copy.headline, caption: copy.caption, hashtags: copy.hashtags, style, created_by: user.id }).select('id').single();
   if (error) go('/studio', 'err', error.message);
-  go(`/studio/${data!.id}`, 'msg', copy.source === 'ai' ? 'Creative generated. Review the copy, then approve it.' : 'Creative generated from a template (add ANTHROPIC_API_KEY for AI-written copy). Review it, then approve.');
+  go(`/studio/${data!.id}`, 'msg', copy.source === 'ai' ? 'Creative generated. Review the copy, then approve it.' : 'Creative generated from a template (add an AI key in Settings for AI-written copy). Review it, then approve.');
 }
 
 export async function saveCreative(f: FormData) {

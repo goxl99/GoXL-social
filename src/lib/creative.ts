@@ -1,4 +1,5 @@
 import type { Product } from '@/lib/ai/assistant';
+import { complete, type AIConfig } from '@/lib/ai/llm';
 
 export const CATEGORIES: Record<string, string> = {
   new_arrival: 'New arrival', offer: 'Offer or discount', festival: 'Festival greeting', restock: 'Back in stock', daily: 'Daily product highlight',
@@ -44,33 +45,23 @@ export function templateCopy(b: B, p: Product, category: string, lang: 'en' | 'h
   return { headline: headline.slice(0, 60), caption: caption.replace(/\s+/g, ' ').trim(), hashtags: [...new Set(tags)].join(' ') };
 }
 
-/** Uses Claude when ANTHROPIC_API_KEY is set; every rupee amount must match the product's real prices, else falls back to the template. */
-export async function generateCopy(b: B & { tone: string | null }, p: Product, category: string, lang: 'en' | 'hi' | 'gu'): Promise<Copy & { source: 'ai' | 'template' }> {
+/** Uses the account's AI provider when configured; every rupee amount must match the product's real prices, else falls back to the template. */
+export async function generateCopy(b: B & { tone: string | null }, p: Product, category: string, lang: 'en' | 'hi' | 'gu', ai: AIConfig | null): Promise<Copy & { source: 'ai' | 'template' }> {
   const fallback = { ...templateCopy(b, p, category, lang), source: 'template' as const };
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) return fallback;
+  if (!ai) return fallback;
   const allowed = new Set([p.price, offerOf(p), p.price - offerOf(p)]);
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 20000);
+  const system = `You write short social media posts for small Indian businesses. Language: ${LANGS[lang]}. Tone: ${b.tone ?? 'Warm and simple'}. Use only the facts given. Mention only these prices: selling price ${offerOf(p)}, MRP ${p.price}. Never invent discounts, stock claims, delivery promises or offers. Reply with ONE JSON object only: {"headline": string (max 45 chars), "caption": string (max 350 chars, ends with a call to message the business), "hashtags": string (4 to 6 hashtags)}`;
+  const user = JSON.stringify({ business: b.name, city: b.city, post_type: CATEGORIES[category], product: { name: p.name, category: p.category, description: p.description, variants: p.variants, sizes: p.sizes, selling_price: offerOf(p), mrp: p.price } });
+  const r = await complete(ai, system, [{ role: 'user', content: user }], 500);
+  if ('error' in r) return fallback;
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST', signal: ctrl.signal,
-      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify({
-        model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5', max_tokens: 500,
-        system: `You write short social media posts for small Indian businesses. Language: ${LANGS[lang]}. Tone: ${b.tone ?? 'Warm and simple'}. Use only the facts given. Mention only these prices: selling price ${offerOf(p)}, MRP ${p.price}. Never invent discounts, stock claims, delivery promises or offers. Reply with ONE JSON object only: {"headline": string (max 45 chars), "caption": string (max 350 chars, ends with a call to message the business), "hashtags": string (4 to 6 hashtags)}`,
-        messages: [{ role: 'user', content: JSON.stringify({ business: b.name, city: b.city, post_type: CATEGORIES[category], product: { name: p.name, category: p.category, description: p.description, variants: p.variants, sizes: p.sizes, selling_price: offerOf(p), mrp: p.price } }) }],
-      }),
-    });
-    if (!res.ok) return fallback;
-    const data = await res.json();
-    const text = String(data?.content?.[0]?.text ?? '');
-    const j = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
+    const t = r.text;
+    const j = JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1));
     if (typeof j.headline !== 'string' || typeof j.caption !== 'string' || !j.headline.trim() || !j.caption.trim()) return fallback;
     const nums = [...`${j.headline} ${j.caption}`.matchAll(/(?:₹|rs\.?|inr)\s*([\d,]+(?:\.\d+)?)/gi)].map((m) => Number(m[1].replace(/,/g, '')));
     if (!nums.every((n) => allowed.has(n))) return fallback;
     return { headline: j.headline.trim().slice(0, 60), caption: j.caption.trim().slice(0, 600), hashtags: String(j.hashtags ?? fallback.hashtags).slice(0, 200), source: 'ai' };
-  } catch { return fallback; } finally { clearTimeout(timer); }
+  } catch { return fallback; }
 }
 
 export const fullCaption = (c: { caption: string; hashtags: string | null }, code?: string | null) =>
