@@ -1,12 +1,12 @@
 import { redirect } from 'next/navigation';
-import { getClient } from '@/lib/supabase/server';
+import { getClient, getUser } from '@/lib/supabase/server';
 import { signOut } from '@/app/actions';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Pending() {
   const client = await getClient();
-  const { data: { user } } = await client.auth.getUser();
+  const user = await getUser();
   if (!user) redirect('/login');
   const { data } = await client.schema('gx').from('members').select('business:businesses(id,name,status,onboarded)').eq('user_id', user.id);
   const list = ((data ?? []) as unknown as { business: { id: string; name: string; status: string; onboarded: boolean } }[]).map((m) => m.business).filter(Boolean);

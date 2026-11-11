@@ -1,5 +1,5 @@
 /* GoXL brand: Deep Forest Green, Lime-Yellow, Montserrat. Lime marks the primary action on each screen. */
-:root{--deep:#0F2A1E;--forest:#1B4332;--lime:#C8E600;--paper:#F3F6F1;--card:#fff;--ink:#12281C;--muted:#5C7064;--line:#DDE5DE;--soft:#E9F0E9;--good:#1F8A4C;--warn:#B7791F;--bad:#B3261E;--display:'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;--mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;color-scheme:light}
+:root{--deep:#0F2A1E;--forest:#1B4332;--lime:#C8E600;--paper:#F3F6F1;--card:#fff;--ink:#12281C;--muted:#5C7064;--line:#DDE5DE;--soft:#E9F0E9;--good:#1F8A4C;--warn:#B7791F;--bad:#B3261E;--display:var(--font-montserrat),'Montserrat',system-ui,-apple-system,'Segoe UI',sans-serif;--mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;color-scheme:light}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{background:var(--paper);color:var(--ink);font-family:var(--display);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
@@ -110,3 +110,33 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .kcol{background:var(--soft);border-radius:12px;padding:10px;min-height:120px}.kcol h3{font-size:12px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em;color:var(--forest);display:flex;justify-content:space-between}
 .kcard{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px;font-size:12.5px}
 @media (max-width:900px){.inbox{grid-template-columns:1fr}.cal > div{min-height:60px}}
+
+/* Polish: feedback, motion, hierarchy */
+html{scroll-behavior:smooth}
+.sk{background:linear-gradient(90deg,#E6ECE6 25%,#F1F5F1 37%,#E6ECE6 63%);background-size:400% 100%;animation:sk 1.2s ease infinite;border-radius:8px}
+@keyframes sk{0%{background-position:100% 50%}100%{background-position:0 50%}}
+.btn{transition:background .15s,transform .05s,box-shadow .15s}.btn:active{transform:translateY(1px)}
+.btn.busy{position:relative;color:transparent!important;pointer-events:none}
+.btn.busy::after{content:"";position:absolute;inset:0;margin:auto;width:15px;height:15px;border-radius:50%;border:2px solid currentColor;border-color:var(--deep) transparent var(--deep) transparent;animation:spin .7s linear infinite}
+.btn:not(.pri):not(.sec):not(.bad).busy::after{border-color:#fff transparent #fff transparent}
+@keyframes spin{to{transform:rotate(360deg)}}
+.card{box-shadow:0 1px 2px rgba(15,42,30,.04)}
+.card > h2:first-child{margin-bottom:2px}
+.tile{transition:box-shadow .15s,transform .15s}a.tile:hover,.tile:hover{box-shadow:0 6px 18px rgba(15,42,30,.08);transform:translateY(-1px)}
+a.tile{color:inherit;text-decoration:none}
+.nav{transition:background .12s}
+.nav.on{font-weight:700}
+.step:hover{border-color:var(--forest);background:#F8FBF4}
+tbody tr{transition:background .1s}tbody tr:hover td{background:#F8FBF4}
+label.f > input:hover,label.f > select:hover,label.f > textarea:hover{border-color:#B9C8BD}
+label.f > input:focus,label.f > select:focus,label.f > textarea:focus{outline:none;border-color:var(--forest);box-shadow:0 0 0 3px rgba(200,230,0,.45)}
+.flash{animation:slide .25s ease both}@keyframes slide{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.content{animation:fade .18s ease both}@keyframes fade{from{opacity:.4}to{opacity:1}}
+.top b{font-size:13px}
+.auth{background:radial-gradient(1200px 500px at 70% -10%,#1B4332 0,transparent 60%),var(--deep)}
+.auth .card{box-shadow:0 20px 50px rgba(0,0,0,.3);padding:26px}
+.wiz .card{margin-bottom:0}
+input[type=radio]{accent-color:var(--forest)}
+label.f:has(input[type=radio]:checked){border-color:var(--forest)!important;background:#F6FAEA}
+@media (max-width:860px){.btn{min-height:40px}label.f > input,label.f > select{min-height:42px}.tw{margin:0 -4px}th,td{padding:9px 10px}}
+@media (prefers-reduced-motion:reduce){.sk,.flash,.content,.btn.busy::after{animation:none!important}}

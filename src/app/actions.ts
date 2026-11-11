@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { getClient } from '@/lib/supabase/server';
+import { getClient, getUser } from '@/lib/supabase/server';
 import { getContext, BUCKET, type Role } from '@/lib/context';
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
@@ -45,7 +45,7 @@ function businessPatch(f: FormData) {
 
 export async function completeOnboarding(f: FormData) {
   const client = await getClient();
-  const { data: { user } } = await client.auth.getUser();
+  const user = await getUser();
   if (!user) redirect('/login');
   const db = client.schema('gx');
   const name = str(f, 'name');

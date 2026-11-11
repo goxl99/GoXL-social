@@ -1,6 +1,7 @@
+import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { getClient } from '@/lib/supabase/server';
+import { getClient, getUser } from '@/lib/supabase/server';
 import { isSuperAdmin } from '@/lib/admin';
 
 export type Role = 'owner' | 'manager' | 'sales' | 'fulfilment';
@@ -14,9 +15,9 @@ export const publicUrl = (path: string | null | undefined) =>
   path ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}` : null;
 
 /** Resolves the signed-in user, their businesses and the active business. Redirects when anything is missing. */
-export async function getContext() {
+export const getContext = cache(async function getContext() {
   const client = await getClient();
-  const { data: { user } } = await client.auth.getUser();
+  const user = await getUser();
   if (!user) redirect('/login');
   const db = client.schema('gx');
   const load = async () => {
@@ -41,4 +42,4 @@ export async function getContext() {
   }
   if (!current.business.onboarded) redirect('/onboarding?finish=' + current.business.id);
   return { client, db, user, memberships: usable, current, business: current.business, role: current.role, canEdit: current.role === 'owner' || current.role === 'manager' };
-}
+});

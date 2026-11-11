@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { getClient } from '@/lib/supabase/server';
+import { getClient, getUser } from '@/lib/supabase/server';
 import { completeOnboarding } from '@/app/actions';
 import Flash from '@/components/Flash';
 
@@ -7,7 +7,7 @@ type SP = Promise<{ finish?: string; msg?: string; err?: string }>;
 
 export default async function Onboarding({ searchParams }: { searchParams: SP }) {
   const client = await getClient();
-  const { data: { user } } = await client.auth.getUser();
+  const user = await getUser();
   if (!user) redirect('/login');
   const { finish } = await searchParams;
   let b: Record<string, string | number | null> = {};

@@ -1,13 +1,14 @@
+import { cache } from 'react';
 import { redirect } from 'next/navigation';
 import { admin, hasAdmin } from '@/lib/supabase/admin';
-import { getClient } from '@/lib/supabase/server';
+import { getUser } from '@/lib/supabase/server';
 import { decrypt, encrypt } from '@/lib/crypto';
 
 export type PlatformSecretName = 'ai_anthropic_key' | 'ai_openai_key' | 'meta_app_secret';
 export const PLATFORM_SECRET_NAMES: PlatformSecretName[] = ['ai_anthropic_key', 'ai_openai_key', 'meta_app_secret'];
 
 /** True when this user is a GoXL platform administrator (platform_admins table, or SUPER_ADMIN_EMAILS as a bootstrap). Never throws. */
-export async function isSuperAdmin(userId: string, email?: string | null): Promise<boolean> {
+export const isSuperAdmin = cache(async function isSuperAdmin(userId: string, email?: string | null): Promise<boolean> {
   if (!hasAdmin()) return false;
   try {
     const listed = (process.env.SUPER_ADMIN_EMAILS ?? '').toLowerCase().split(',').map((s) => s.trim()).filter(Boolean);
@@ -15,15 +16,14 @@ export async function isSuperAdmin(userId: string, email?: string | null): Promi
     const { data } = await admin().from('platform_admins').select('user_id').eq('user_id', userId).maybeSingle();
     return !!data;
   } catch { return false; }
-}
+});
 
 /** Gate for every admin page and action. Redirects non-admins away; returns the signed-in admin. */
 export async function requireSuperAdmin() {
-  const client = await getClient();
-  const { data: { user } } = await client.auth.getUser();
+  const user = await getUser();
   if (!user) redirect('/login');
   if (!(await isSuperAdmin(user.id, user.email))) redirect('/dashboard');
-  return { user: user!, email: user!.email ?? '' };
+  return { user, email: user.email ?? '' };
 }
 
 export async function audit(actor: { user: { id: string }; email: string }, action: string, businessId: string | null, detail?: string) {
